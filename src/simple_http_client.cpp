@@ -138,9 +138,30 @@ void update_configuration()
         int len = Udp.read(packet_buffer, 255);
         if (len > 0) {
             packet_buffer[len] = 0;
+
+            switch (packet_buffer[0]) {
+            case 'p': // update pulse period
+                if (len >= 2) {
+                    pulse_period = labs(atol(packet_buffer + 1));
+
+                    bool status = scheduler.changePeriod(0, pulse_period) & scheduler.disable(0) & scheduler.enable(0);
+                    if (!status)
+                        sprintf(packet_buffer, "ERROR: Could not change the pulse period\n");
+                    else
+                        sprintf(packet_buffer, "New period : %u ms\n", pulse_period);
+                }
+                else {
+                    sprintf(packet_buffer, "Syntax error on command: [p]eriod");
+                }
+                break;
+            case 'h': // TODO: print a help message with all accepted commands
+                sprintf(packet_buffer, "This should be an help message\n");
+                break;
+            default:
+                Serial.println("Contents:");
+                Serial.println(packet_buffer);
+            }
         }
-        Serial.println("Contents:");
-        Serial.println(packet_buffer);
 
         // send a reply, to the IP address and port that sent us the packet wee received
         Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());

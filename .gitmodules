@@ -1,3 +1,4 @@
 [submodule "lib/TickerScheduler"]
 	path = lib/TickerScheduler
 	url = https://github.com/Toshik/TickerScheduler.git
+	branch = changePeriod

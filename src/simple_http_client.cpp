@@ -7,9 +7,9 @@
 const char* ssid = "LarsenRobots";
 const char* password = "Httl3)7GZZA3/V\\M-dm4sfjLSaH2vfb";
 
-IPAddress staticIP(152, 81, 70, 17);
-IPAddress gateway(152, 81, 70, 1);
-IPAddress subnet(255, 255, 255, 0);
+const IPAddress staticIP(152, 81, 70, 17);
+const IPAddress gateway(152, 81, 70, 1);
+const IPAddress subnet(255, 255, 255, 0);
 
 // Seed for the pulses sent to the ROS node
 uint16_t pulse_seed;
@@ -19,7 +19,7 @@ WiFiUDP Udp;
 char packet_buffer[512]; // buffer for incoming data;
 
 // Global settings
-uint16_t config_port = 1043; // local port on which we listen for configuration
+const uint16_t config_port = 1043; // local port on which we listen for configuration
 // update commands
 IPAddress recipient_ip(152, 81, 10, 184); // IP address of the computer to which we
 // send the pulses

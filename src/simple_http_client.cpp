@@ -1,4 +1,5 @@
 #include <ESP8266WiFi.h>
+#include <EEPROM.h>
 #include <WiFiUdp.h>
 #include <TickerScheduler.h>
 
@@ -32,12 +33,20 @@ TickerScheduler scheduler(2);
 void send_pulse();
 void update_configuration();
 void help_message(char* buffer);
+void save_settings();
+void read_settings();
 
 void setup(void)
 {
     // Initialize the serial port
     Serial.begin(115200);
-    Serial.println();
+    Serial.println('\n');
+
+    // Initialize EEPROM
+    static const uint32_t byte_space = 4 + 2 + 4; // memory space used by the
+    // settings: 4 for the IP, 2 for the port, 4 for the pulse period
+    EEPROM.begin(byte_space);
+    read_settings();
 
     // Connect to the Wifi network
     WiFi.begin(ssid, password);
@@ -159,6 +168,9 @@ void update_configuration()
                 parameter.trim(); // remove front and trailing spaces but above
                 // all newline character
 
+                // tell whether the setting change was successful
+                bool success = false;
+
                 // Select the command to execute based on first received
                 // character
                 switch (packet_buffer[0]) {
@@ -169,10 +181,10 @@ void update_configuration()
 
                     // Change the period of the pulse task (change value and
                     // update task)
-                    bool status = scheduler.changePeriod(0, new_pulse_period)
+                    success = scheduler.changePeriod(0, new_pulse_period)
                         & scheduler.disable(0) // required for the change to be
                         & scheduler.enable(0); // effective
-                    if (!status)
+                    if (!success)
                         sprintf(packet_buffer, "ERROR: Could not change the pulse period\n");
                     else {
                         pulse_period = new_pulse_period;
@@ -185,7 +197,7 @@ void update_configuration()
                 {
                     // attempt to update the recipient IP ( andchecking if the
                     // IP is valid)
-                    if (!recipient_ip.fromString(parameter)) {
+                    if (!(success = recipient_ip.fromString(parameter))) {
                         sprintf(packet_buffer, "ERROR: Could not change the "
                                                "recipient IP from string %s\n"
                                                "Current address %s\n",
@@ -209,6 +221,7 @@ void update_configuration()
                         sprintf(packet_buffer, "ERROR: Could not change the "
                                                "recipient port to%u\n",
                             new_port);
+                        success = true;
                     }
                     else {
                         recipient_port = new_port;
@@ -222,6 +235,10 @@ void update_configuration()
                 default:
                     help_message(packet_buffer);
                 }
+
+                // save the settings in EEPRO if the change was successful
+                if (success)
+                    save_settings();
             }
             else {
                 help_message(packet_buffer);
@@ -252,4 +269,28 @@ void help_message(char* buffer)
         "\tp 1042          set recipient port to 1042\n"
         "\nThe wifi SSID and password and network settings of the emergency stop"
         " are hard-coded in the firmware.\n");
+}
+
+void save_settings()
+{
+    EEPROM.put(0, (uint32_t)recipient_ip);
+    EEPROM.put(4, recipient_port);
+    EEPROM.put(6, pulse_period);
+    EEPROM.commit();
+}
+
+void read_settings()
+{
+    uint32_t temp_ip;
+    EEPROM.get(0, temp_ip);
+    recipient_ip = temp_ip;
+    EEPROM.get(4, recipient_port);
+    EEPROM.get(6, pulse_period);
+    Serial.printf(
+        "Recipient IP   %s\n"
+        "Recipient port %u\n"
+        "Pulse period   %u\n",
+        recipient_ip.toString().c_str(),
+        recipient_port,
+        pulse_period);
 }

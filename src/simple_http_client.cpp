@@ -3,6 +3,9 @@
 #include <WiFiUdp.h>
 #include <TickerScheduler.h>
 
+// Class in charge of blinking a led
+#include "Led.hpp"
+
 // Networking configuration
 const char* ssid = "LarsenRobots";
 const char* password = "Httl3)7GZZA3/V\\M-dm4sfjLSaH2vfb";
@@ -27,7 +30,7 @@ uint16_t recipient_port = 1042; // port to which the pulses are sent
 uint32_t pulse_period = 500; // period of the pulse
 
 // Create an instance of the task scheduler
-TickerScheduler scheduler(2);
+TickerScheduler scheduler(5);
 
 // Function prototypes
 void send_pulse();
@@ -93,7 +96,13 @@ void setup(void)
         Serial.println("ERROR: Could not create the pulse task");
     if (!scheduler.add(1, 1000, update_configuration, true))
         Serial.println("ERROR: Could not create the configuration task");
+    // CAUTION : Tasks 2 to 4 are reserved for the led blinking class
 
+    // initialisation of the led blinking class
+    // pin for the led: 4
+    blinkLed.init(4, &scheduler);
+
+    // initialise the pulse counter with a very basic number
     unsigned int voltage = analogRead(A0);
     unsigned long milliseconds = millis();
     pulse_seed = (voltage * milliseconds) % 4096;
@@ -103,6 +112,8 @@ void setup(void)
 void loop()
 {
     scheduler.update();
+    blinkLed.update();
+
     delay(10);
 }
 
@@ -227,6 +238,39 @@ void update_configuration()
                         recipient_port = new_port;
                         sprintf(packet_buffer, "New recipient port : %u\n",
                             recipient_port);
+                    }
+
+                    break;
+                }
+                case 'd': // change the led's duty cycle
+                {
+                    uint8_t new_duty_cycle = labs(parameter.toInt());
+
+                    if (new_duty_cycle > 99 || new_duty_cycle < 1) {
+                        sprintf(packet_buffer, "ERROR: requested duty cycle %u% "
+                                               "is out of range of [1, 99].\n",
+                            new_duty_cycle);
+                    }
+                    else {
+                        blinkLed.set_duty_cycle(new_duty_cycle);
+                        sprintf(packet_buffer, "Duty cycle changed to %u%\n",
+                            new_duty_cycle);
+                    }
+                    break;
+                }
+                case 'e': // change the led's blink period
+                {
+                    uint16_t new_period = labs(parameter.toInt());
+
+                    if (!blinkLed.set_period(new_period)) {
+                        sprintf(packet_buffer, "ERROR: failed to set blinking "
+                                               "period to %u (probably due to "
+                                               "TickerScheduler)\n",
+                            new_period);
+                    }
+                    else {
+                        sprintf(packet_buffer, "Blink period changed to %u\n",
+                            new_period);
                     }
 
                     break;

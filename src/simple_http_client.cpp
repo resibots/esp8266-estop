@@ -1,36 +1,42 @@
 #include <ESP8266WiFi.h>
 #include <EEPROM.h>
 #include <WiFiUdp.h>
+#include <TimeLib.h>
 #include <TickerScheduler.h>
 
 // Class in charge of blinking a led
 #include "Led.hpp"
 
-// Networking configuration
+// Functions getting current time from an NTP server
+#include "ntp.hpp"
+
+// Global variables and settings
+#include "globals.hpp"
+
+// Global settings
+//  Wifi configuration
 const char* ssid = "LarsenRobots";
 const char* password = "Httl3)7GZZA3/V\\M-dm4sfjLSaH2vfb";
-
+//  Network configuration
 const IPAddress staticIP(152, 81, 70, 17);
 const IPAddress gateway(152, 81, 70, 1);
 const IPAddress subnet(255, 255, 255, 0);
-
-// Seed for the pulses sent to the ROS node
-uint16_t pulse_seed;
-
-// Create the class for UDP communication
+const IPAddress dns_server_primary(152, 81, 1, 128);
+const IPAddress dns_server_secondary(152, 81, 1, 25);
+//  Seed for the pulses sent to the ROS node
+uint32_t pulse_seed;
+uint32_t suivant = 1;
+//  Global settings
+const uint16_t config_port = 1043; // local port on which we listen for configuration
+IPAddress recipient_ip(152, 81, 10, 184); // IP address of the computer to which we
+                                          // send the pulses
+uint16_t recipient_port = 1042; // port to which the pulses are sent
+uint32_t pulse_period = 500; // period of the pulse (ms)
+//  Object for UDP communication
 WiFiUDP Udp;
 char packet_buffer[512]; // buffer for incoming data;
-
-// Global settings
-const uint16_t config_port = 1043; // local port on which we listen for configuration
-// update commands
-IPAddress recipient_ip(152, 81, 10, 184); // IP address of the computer to which we
-// send the pulses
-uint16_t recipient_port = 1042; // port to which the pulses are sent
-uint32_t pulse_period = 500; // period of the pulse
-
-// Create an instance of the task scheduler
-TickerScheduler scheduler(5);
+//  Instance of the task scheduler
+TickerScheduler scheduler(2 + 3 + 1);
 
 // Function prototypes
 void send_pulse();
@@ -38,6 +44,12 @@ void update_configuration();
 void help_message(char* buffer);
 void save_settings();
 void read_settings();
+void read_battery_voltage();
+
+time_t prevDisplay = 0; // when the digital clock was displayed
+
+void printDigits(int digits);
+void digitalClockDisplay();
 
 void setup(void)
 {
@@ -52,8 +64,10 @@ void setup(void)
     read_settings();
 
     // Connect to the Wifi network
+    // We only leave the loop when connected. In the meantime the status is
+    // printed to the serial connection.
     WiFi.begin(ssid, password);
-    WiFi.config(staticIP, gateway, subnet);
+    WiFi.config(staticIP, gateway, subnet, dns_server_primary, dns_server_secondary);
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         String status = "";
@@ -88,29 +102,69 @@ void setup(void)
     Serial.printf("Mac address: %02x:%02x:%02x:%02x:%02x:%02x\n",
         macAddr[0], macAddr[1], macAddr[2], macAddr[3], macAddr[4], macAddr[5]);
 
+
     // Setup of UDP communication with the port on which to listen
     Udp.begin(config_port);
+    
+    
+        // Get the time from NTP server
+        // Serial.println("Starting UDP for NTP");
+        // Udp.begin(NTPPort);
+        Serial.println("waiting for sync");
+        setSyncProvider(getNtpTime);
 
     // Setup the scheduler
-    if (!scheduler.add(0, pulse_period, send_pulse, true))
-        Serial.println("ERROR: Could not create the pulse task");
-    if (!scheduler.add(1, 1000, update_configuration, true))
-        Serial.println("ERROR: Could not create the configuration task");
-    // CAUTION : Tasks 2 to 4 are reserved for the led blinking class
+    // if (!scheduler.add(0, pulse_period, send_pulse, true))
+    //     Serial.println("ERROR: Could not create the pulse task");
+    // if (!scheduler.add(1, 1000, update_configuration, true))
+    //     Serial.println("ERROR: Could not create the configuration task");
+    // // CAUTION : Tasks 2 to 4 are reserved for the led blinking class
+    // if (!scheduler.add(5, 300, read_battery_voltage, true))
+    //     Serial.println("ERROR: Could not create the battery monitoring task");
 
-    // initialisation of the led blinking class
-    // pin for the led: 4
-    blinkLed.init(4, &scheduler);
+    // // initialisation of the led blinking class
+    // // pin for the led: 4
+    // blinkLed.init(4, &scheduler);
 
-    // initialise the pulse counter with a very basic number
-    unsigned int voltage = analogRead(A0);
-    unsigned long milliseconds = millis();
-    pulse_seed = (voltage * milliseconds) % 4096;
-    Serial.printf("Seed for the pulses : %u\n", pulse_seed);
+    // // initialise the pulse counter with a very basic number
+    // unsigned int voltage = analogRead(A0);
+    // unsigned long milliseconds = millis();
+    // pulse_seed = (voltage * milliseconds) % 4096;
+    // Serial.printf("Seed for the pulses : %u\n", pulse_seed);
+}
+
+void digitalClockDisplay()
+{
+    // digital clock display of the time
+    Serial.print(hour());
+    printDigits(minute());
+    printDigits(second());
+    Serial.print(" ");
+    Serial.print(day());
+    Serial.print(".");
+    Serial.print(month());
+    Serial.print(".");
+    Serial.print(year()); 
+    Serial.println(); 
+}
+
+void printDigits(int digits)
+{
+    // utility for digital clock display: prints preceding colon and leading 0
+    Serial.print(":");
+    if(digits < 10)
+        Serial.print('0');
+    Serial.print(digits);
 }
 
 void loop()
 {
+    if (timeStatus() != timeNotSet) {
+        if (now() != prevDisplay) { //update the display only if time has changed
+            prevDisplay = now();
+            digitalClockDisplay();  
+        }
+    }
     scheduler.update();
     blinkLed.update();
 
@@ -119,16 +173,18 @@ void loop()
 
 void send_pulse()
 {
-    char message[] = "tick";
+    char message[126];
 
-    pulse_seed = (pulse_seed + 1) % 65536;
-    sprintf(message, "%u", pulse_seed);
+    // pulse_seed = (pulse_seed + 1) % 65536;
+    suivant = suivant * 1103515245 + 12345;
+    pulse_seed = ((unsigned)(suivant/65536) % 32768);
+    sprintf(message, "tick %u", pulse_seed);
     // randomSeed(0);
     // long randNumber = random(4096);
     // Serial.printf("aleatoire : %u\n", randNumber);
 
-    int status = 0;
     // Send a packet to the ROS emergency stop gateway
+    int status = 0;
     status = Udp.beginPacket(recipient_ip, recipient_port);
     if (status == 0)
         Serial.println("Problen in IP or port for packet preparation");
@@ -173,9 +229,9 @@ void update_configuration()
                     recipient_port,
                     pulse_period);
             }
-            else if (len > 2) {
+            else if (len > 2 && packet_buffer[1] != ' ') {
                 // Store the parameters in a String and remove empty characters
-                String parameter(packet_buffer + 1);
+                String parameter(packet_buffer + 2);
                 parameter.trim(); // remove front and trailing spaces but above
                 // all newline character
 
@@ -337,4 +393,20 @@ void read_settings()
         recipient_ip.toString().c_str(),
         recipient_port,
         pulse_period);
+}
+
+void read_battery_voltage()
+{
+    // The analog to digital converter has 10 bits, so ranges from 0 to 1023, for a
+    // voltage in the range 0V - 1V.
+    int level = analogRead(A0);
+
+    // We use a resistor-based voltage divider with R1 and R2 (R2 being the resistor
+    // closest to the ground). Values: R1 = 1000 kOhm; R2 = 220 kOhm
+    // Battery max voltage is 4.2V corresponding to 774 in digital
+    //         min            3.14V                 579
+    // Hence, we remap from digital values to percentage of charge
+    double percent_charge = (level - 579) * 100.0 / (774 - 579);
+    // Serial.print("Battery charge level is ");
+    // Serial.println(percent_charge);
 }

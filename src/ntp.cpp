@@ -5,7 +5,7 @@
 // Global variables and settings
 #include "globals.hpp"
 
-void sendNTPpacket(IPAddress &address);
+void sendNTPpacket();
 
 unsigned int NTPPort = 8888;  // local port to listen for UDP packets
 

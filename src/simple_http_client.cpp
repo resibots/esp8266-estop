@@ -22,7 +22,7 @@
 WiFiUDP Udp;
 char packet_buffer[512]; // buffer for incoming data;
 //  Instance of the task scheduler
-TickerScheduler scheduler(2 + 3 + 1 + 1);
+TickerScheduler scheduler(2 + 3 + 1);
 
 Configuration conf(Udp, packet_buffer, scheduler);
 
@@ -30,10 +30,7 @@ Configuration conf(Udp, packet_buffer, scheduler);
 void send_pulse();
 void read_battery_voltage();
 
-time_t prevDisplay = 0; // when the digital clock was displayed
 
-void printDigits(int digits);
-void digitalClockDisplay();
 
 void setup(void)
 {
@@ -115,8 +112,6 @@ void setup(void)
     // CAUTION : Tasks 2 to 4 are reserved for the led blinking class
     if (!scheduler.add(5, 300, read_battery_voltage, true))
         Serial.println("ERROR: Could not create the battery monitoring task");
-    if (!scheduler.add(6, 1500, digitalClockDisplay, true))
-        Serial.println("ERROR: Could not create the time printing task");
 
     // initialisation of the led blinking class
     // pin for the led: 4
@@ -135,30 +130,6 @@ void loop()
     blinkLed.update();
 
     delay(10);
-}
-
-void digitalClockDisplay()
-{
-    // digital clock display of the time
-    Serial.print(hour());
-    printDigits(minute());
-    printDigits(second());
-    Serial.print(" ");
-    Serial.print(day());
-    Serial.print(".");
-    Serial.print(month());
-    Serial.print(".");
-    Serial.print(year()); 
-    Serial.println(); 
-}
-
-void printDigits(int digits)
-{
-    // utility for digital clock display: prints preceding colon and leading 0
-    Serial.print(":");
-    if(digits < 10)
-        Serial.print('0');
-    Serial.print(digits);
 }
 
 void send_pulse()

@@ -8,4 +8,9 @@
 **/
 time_t getNtpTime();
 
+// // These methods are used to display the time. We comment them to use less
+// // programm memory, since they are only usefull to debugging.
+// void digitalClockDisplay()
+// void printDigits(int digits)
+
 #endif

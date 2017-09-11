@@ -144,7 +144,7 @@ void Configuration::update()
         _udp.endPacket();
 
         // Print the same reply to the serial line
-        Serial.print(_packet_buffer);
+        // Serial.print(_packet_buffer);
     }
 }
 

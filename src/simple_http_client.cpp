@@ -22,7 +22,7 @@
 WiFiUDP Udp;
 char packet_buffer[512]; // buffer for incoming data;
 //  Instance of the task scheduler
-TickerScheduler scheduler(2 + 3 + 1);
+TickerScheduler scheduler(2 + 3 + 1 + 1);
 
 Configuration conf(Udp, packet_buffer, scheduler);
 
@@ -86,16 +86,25 @@ void setup(void)
     Serial.printf("Mac address: %02x:%02x:%02x:%02x:%02x:%02x\n",
         macAddr[0], macAddr[1], macAddr[2], macAddr[3], macAddr[4], macAddr[5]);
 
-
     // Setup of UDP communication with the port on which to listen
     Udp.begin(conf.config_port);
     
-    
-        // Get the time from NTP server
-        // Serial.println("Starting UDP for NTP");
-        // Udp.begin(NTPPort);
-        Serial.println("waiting for sync");
-        setSyncProvider(getNtpTime);
+    // Get the time from NTP server
+    Serial.println("waiting for Network Time Protocol sync");
+    setSyncProvider(getNtpTime);
+    Serial.print("Time status: ");
+    switch(timeStatus()){
+    case timeNotSet:
+        Serial.println("not set");
+        break;
+    case timeSet:
+        Serial.println("set");
+        break;
+    case timeNeedsSync:
+        Serial.println("needs sync");
+        break;
+
+    }
 
     // Setup the scheduler
     if (!scheduler.add(0, conf.pulse_period, send_pulse, true))
@@ -106,6 +115,8 @@ void setup(void)
     // CAUTION : Tasks 2 to 4 are reserved for the led blinking class
     if (!scheduler.add(5, 300, read_battery_voltage, true))
         Serial.println("ERROR: Could not create the battery monitoring task");
+    if (!scheduler.add(6, 1500, digitalClockDisplay, true))
+        Serial.println("ERROR: Could not create the time printing task");
 
     // initialisation of the led blinking class
     // pin for the led: 4
@@ -120,12 +131,6 @@ void setup(void)
 
 void loop()
 {
-    // if (timeStatus() != timeNotSet) {
-    //     if (now() != prevDisplay) { //update the display only if time has changed
-    //         prevDisplay = now();
-    //         digitalClockDisplay();  
-    //     }
-    // }
     scheduler.update();
     blinkLed.update();
 

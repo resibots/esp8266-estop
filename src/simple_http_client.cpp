@@ -134,12 +134,10 @@ void loop()
 
 void send_pulse()
 {
-    char message[126];
-
     // pulse_seed = (pulse_seed + 1) % 65536;
     conf.suivant = conf.suivant * 1103515245 + 12345;
     conf.pulse_seed = ((unsigned)(conf.suivant/65536) % 32768);
-    sprintf(message, "tick %u", conf.pulse_seed);
+    sprintf(packet_buffer, "tick %u", conf.pulse_seed);
     // randomSeed(0);
     // long randNumber = random(4096);
     // Serial.printf("aleatoire : %u\n", randNumber);
@@ -149,7 +147,7 @@ void send_pulse()
     status = Udp.beginPacket(conf.recipient_ip, conf.recipient_port);
     if (status == 0)
         Serial.println("Problen in IP or port for packet preparation");
-    status = Udp.write(message, sizeof(message));
+    status = Udp.write(packet_buffer, strlen(packet_buffer));
     //  Serial.print("Amount of data sent: ");
     //  Serial.println(status);
 

@@ -5,6 +5,7 @@
 #include <WiFiUdp.h>
 #include <TimeLib.h>
 #include <TickerScheduler.h>
+#include <SHA256.h>
 
 // Class in charge of blinking a led
 #include "Led.hpp"
@@ -30,7 +31,19 @@ Configuration conf(Udp, packet_buffer, scheduler);
 void send_pulse();
 void read_battery_voltage();
 
-
+void hmac(const char* message, const size_t message_size, char* hmac, const size_t hmac_size){
+    SHA256 hash;
+    char key[] = "16:40:35";
+    hash.resetHMAC(key, sizeof(key));
+    Serial.print("Message size: "); Serial.println ((int)message_size);
+    hash.update(message, message_size);
+    hash.finalizeHMAC(key, sizeof(key), hmac, hmac_size);
+    // Serial.print("Hmac output: ");
+    // for (uint8_t i=0; i<sizeof(hmac); ++i)
+    // {
+    //     Serial.println((int)hmac[i], HEX);
+    // }
+}
 
 void setup(void)
 {
@@ -122,6 +135,13 @@ void setup(void)
     // unsigned long milliseconds = millis();
     // pulse_seed = (voltage * milliseconds) % 4096;
     // Serial.printf("Seed for the pulses : %u\n", pulse_seed);
+
+    Serial.print("now has ");
+    Serial.print((int)sizeof(time_t));
+    Serial.println(" bytes");
+    Serial.print("millis has ");
+    Serial.print((int)sizeof(unsigned long));
+    Serial.println(" bytes");
 }
 
 void loop()
@@ -135,9 +155,63 @@ void loop()
 void send_pulse()
 {
     // pulse_seed = (pulse_seed + 1) % 65536;
-    conf.suivant = conf.suivant * 1103515245 + 12345;
-    conf.pulse_seed = ((unsigned)(conf.suivant/65536) % 32768);
-    sprintf(packet_buffer, "tick %u", conf.pulse_seed);
+    
+    // TODO: this was the current code : pseudo-random number
+    // conf.suivant = conf.suivant * 1103515245 + 12345;
+    // conf.pulse_seed = ((unsigned)(conf.suivant/65536) % 32768);
+    // sprintf(packet_buffer, "tick %u", conf.pulse_seed);
+    time_t time_s = now();
+    unsigned long time_ms = millis();
+    size_t times_length = sizeof(time_s) + sizeof(time_ms);
+    size_t message_length = times_length + 32;
+    //        type of now      type of millis
+    char times[times_length];
+    memset(times, 0, times_length);
+
+    // add times to the times to hash
+    memcpy(times, &time_s, sizeof(time_s));
+    memcpy(times+sizeof(time_s), &time_ms, sizeof(time_ms));
+    // hash the times into packet_buffer
+    hmac(times, times_length, packet_buffer, 32);
+    // append the times to packet_buffer, for the recipient to check
+    memcpy(packet_buffer+32, &times, times_length);
+
+    // Pretty-print the result of the message preparation
+    char read_hash[32];
+    memcpy(read_hash, packet_buffer, 32);
+    time_t read_s;
+    memcpy(&read_s, packet_buffer+32, sizeof(time_t));
+    unsigned long read_ms;
+    memcpy(&read_ms, packet_buffer+32+sizeof(time_t), sizeof(unsigned long));
+    // char read_time[sizeof(double)];
+    // memcpy(read_time, packet_buffer+32, sizeof(double));
+    // // Print time bytes
+    // for (uint8_t i=0; i<sizeof(double); ++i)
+    // {
+    //     Serial.print((int)read_time[i], HEX);
+    // }
+    // Serial.print('\n');
+    // Print hash bytes
+    for (uint8_t i=0; i<32; ++i)
+    {
+        Serial.print((int)read_hash[i], HEX);
+    }
+    Serial.print("; ");
+    for (uint8_t i=32; i<32+times_length; ++i)
+    {
+        Serial.print((int)read_hash[i], HEX);
+    }
+    Serial.print("; ");
+    Serial.print(read_s, DEC);
+    Serial.print(" (s)\t");
+    Serial.print(read_ms, DEC);
+    Serial.println(" (ms)");
+    
+    // Serial.print("Current timestamp: ");
+    // Serial.println(now());
+    // Serial.println((double)now() + (double)millis()*1e-6);
+    // Serial.println((double)millis()*1e-6);
+
     // randomSeed(0);
     // long randNumber = random(4096);
     // Serial.printf("aleatoire : %u\n", randNumber);
@@ -147,7 +221,7 @@ void send_pulse()
     status = Udp.beginPacket(conf.recipient_ip, conf.recipient_port);
     if (status == 0)
         Serial.println("Problen in IP or port for packet preparation");
-    status = Udp.write(packet_buffer, strlen(packet_buffer));
+    status = Udp.write(packet_buffer, message_length);
     //  Serial.print("Amount of data sent: ");
     //  Serial.println(status);
 

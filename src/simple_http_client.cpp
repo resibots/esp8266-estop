@@ -23,7 +23,7 @@
 
 //  Object for UDP communication
 WiFiUDP Udp;
-char packet_buffer[512]; // buffer for incoming data;
+char packet_buffer[512]; // buffer for incoming and outgoing data
 //  Instance of the task scheduler
 TickerScheduler scheduler(2 + 3 + 1);
 

@@ -1,7 +1,6 @@
 #include <functional>
 
 #include <ESP8266WiFi.h>
-// #include <EEPROM.h>
 #include <WiFiUdp.h>
 #include <TimeLib.h>
 #include <TickerScheduler.h>
@@ -12,6 +11,9 @@
 
 // Functions getting current time from an NTP server
 #include "ntp.hpp"
+
+// Pulse generator and sender for heartbeat
+// #include "pulse.hpp"
 
 // Global variables and settings
 #include "globals.hpp"
@@ -27,6 +29,8 @@ TickerScheduler scheduler(2 + 3 + 1);
 
 Configuration conf(Udp, packet_buffer, scheduler);
 
+// Pulse pulse(conf);
+
 // Function prototypes
 void send_pulse();
 void read_battery_voltage();
@@ -35,7 +39,6 @@ void hmac(const char* message, const size_t message_size, char* hmac, const size
     SHA256 hash;
     char key[] = "16:40:35";
     hash.resetHMAC(key, sizeof(key));
-    Serial.print("Message size: "); Serial.println ((int)message_size);
     hash.update(message, message_size);
     hash.finalizeHMAC(key, sizeof(key), hmac, hmac_size);
     // Serial.print("Hmac output: ");
@@ -117,6 +120,7 @@ void setup(void)
     }
 
     // Setup the scheduler
+    // std::function<void(void)> send_pulse = std::bind(&Pulse::send_pulse, pulse);
     if (!scheduler.add(0, conf.pulse_period, send_pulse, true))
         Serial.println("ERROR: Could not create the pulse task");
     std::function<void(void)> update_configuration = std::bind(&Configuration::update, conf);
@@ -135,13 +139,6 @@ void setup(void)
     // unsigned long milliseconds = millis();
     // pulse_seed = (voltage * milliseconds) % 4096;
     // Serial.printf("Seed for the pulses : %u\n", pulse_seed);
-
-    Serial.print("now has ");
-    Serial.print((int)sizeof(time_t));
-    Serial.println(" bytes");
-    Serial.print("millis has ");
-    Serial.print((int)sizeof(unsigned long));
-    Serial.println(" bytes");
 }
 
 void loop()

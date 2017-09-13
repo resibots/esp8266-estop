@@ -4,4 +4,6 @@
 //  Object for UDP communication
 extern WiFiUDP Udp;
 
+extern char packet_buffer[512];
+
 #endif

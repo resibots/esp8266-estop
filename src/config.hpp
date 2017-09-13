@@ -30,9 +30,9 @@ public:
     const IPAddress dns_server_primary;
     const IPAddress dns_server_secondary;
     const uint16_t config_port; // local port on which we listen for configuration
-    //  Seed for the pulses sent to the ROS node
-    uint32_t pulse_seed;
-    uint32_t suivant;
+    //  key for the pulses sent to the ROS node
+    char *key;
+    size_t key_size;
 
     IPAddress recipient_ip; // IP address of the computer to which we send the pulses
     uint16_t recipient_port; // port to which the pulses are sent
@@ -49,10 +49,14 @@ public:
         dns_server_primary(152, 81, 1, 128),
         dns_server_secondary(152, 81, 1, 25),
         config_port(1043),
-        suivant(1),
         recipient_ip(152, 81, 10, 184),
         recipient_port(1042),
-        pulse_period(500){}
+        pulse_period(500)
+        {
+            char secret_key[] = "16:40:35";
+            memcpy(key, secret_key, strlen(secret_key));
+            key_size = strlen(secret_key);
+        }
     void update();
     void load();
     void save();

@@ -20,6 +20,10 @@ public:
 
         We use time as the message, so that pulses that are too old are
         discarded (to limit the risk of relay attack).
+
+        The data is sent as a bynary stream of 32+4+4 bytes. The 32 first bytes
+        is the hash. Then come 4 bytes for the timestamp (unsigned long, in
+        seconds) and 4 last bytes for the milliseconds (unsigned long).
     **/
     void send_pulse(void);
 protected:

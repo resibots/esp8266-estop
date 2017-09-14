@@ -39,10 +39,16 @@ public:
     
     uint32_t pulse_period; // period of the pulse (ms)
 
-    Configuration(WiFiUDP& udp, char* packet_buffer, TickerScheduler& scheduler)
+    enum class CommunicationMode : uint8_t
+    {
+        serial,
+        udp
+    };
+
+    Configuration(WiFiUDP& udp, TickerScheduler& scheduler, CommunicationMode com_mode)
         :_udp(udp),
-        _packet_buffer(packet_buffer),
         _scheduler(scheduler),
+        _com_mode(com_mode),
         staticIP(152,81,70,17),
         gateway(152, 81, 70, 1),
         subnet(255, 255, 255, 0),
@@ -51,7 +57,10 @@ public:
         config_port(1043),
         recipient_ip(152, 81, 10, 184),
         recipient_port(1042),
-        pulse_period(500) {}
+        pulse_period(500) {
+            _buffer_size = 512;
+            _packet_buffer = new char[_buffer_size];
+        }
     void update();
     void load();
     void save();
@@ -61,9 +70,13 @@ protected:
     // These are global variables we are only getting handles to
     WiFiUDP& _udp;
     char* _packet_buffer;
+    size_t _buffer_size;
     TickerScheduler& _scheduler; // TODO: Do we need it ?
+    CommunicationMode _com_mode;
 
-    void help_message(char* buffer);
+    void help_message(bool full_message=false);
+    size_t read(void);
+    size_t write(void);
 };
 
 #endif

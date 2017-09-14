@@ -27,7 +27,7 @@ char packet_buffer[512]; // buffer for incoming and outgoing data
 //  Instance of the task scheduler
 TickerScheduler scheduler(2 + 3 + 1);
 
-Configuration conf(Udp, packet_buffer, 512, scheduler);
+Configuration conf(Udp, scheduler, Configuration::CommunicationMode::serial);
 
 Pulse pulse(conf);
 

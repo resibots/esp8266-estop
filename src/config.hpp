@@ -59,7 +59,7 @@ public:
         recipient_port(1042),
         pulse_period(500) {
             _buffer_size = 512;
-            _packet_buffer = new char[_buffer_size];
+            _buffer = new char[_buffer_size];
         }
     void update();
     void load();
@@ -69,7 +69,7 @@ public:
 protected:
     // These are global variables we are only getting handles to
     WiFiUDP& _udp;
-    char* _packet_buffer;
+    char* _buffer;
     size_t _buffer_size;
     TickerScheduler& _scheduler; // TODO: Do we need it ?
     CommunicationMode _com_mode;

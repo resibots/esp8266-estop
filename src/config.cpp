@@ -6,11 +6,11 @@ void Configuration::update()
     int packet_size = read();
 
     if (packet_size) {
-        _packet_buffer[packet_size] = 0;
+        _buffer[packet_size] = 0;
 
         // Special case: use wants to [r]ead the current settings
-        if (_packet_buffer[0] == 'r') {
-            sprintf(_packet_buffer,
+        if (_buffer[0] == 'r') {
+            sprintf(_buffer,
                 "Recipient IP   %s\n"
                 "Recipient port %u\n"
                 "Pulse period   %u\n",
@@ -18,22 +18,22 @@ void Configuration::update()
                 recipient_port,
                 pulse_period);
         }
-        else if (_packet_buffer[0] == 's') {
+        else if (_buffer[0] == 's') {
             // save the settings in EEPRO if the change was successful
             save();
         }
-        else if (_packet_buffer[0] ==  'h') {
+        else if (_buffer[0] ==  'h') {
             help_message(true);
         }
-        else if (packet_size > 2 && _packet_buffer[1] == ' ') {
+        else if (packet_size > 2 && _buffer[1] == ' ') {
             // Store the parameters in a String and remove empty characters
-            String parameter(_packet_buffer + 2);
+            String parameter(_buffer + 2);
             parameter.trim(); // remove front and trailing spaces but above
             // all newline character
 
             // Select the command to execute based on first received
             // character
-            switch (_packet_buffer[0]) {
+            switch (_buffer[0]) {
             case 't': // update pulse period
             {
                 // retrieve the desired period
@@ -47,10 +47,10 @@ void Configuration::update()
                     & _scheduler.disable(0) // required for the change to be
                     & _scheduler.enable(0); // effective
                 if (!success)
-                    sprintf(_packet_buffer, "ERROR: Could not change the pulse period\n");
+                    sprintf(_buffer, "ERROR: Could not change the pulse period\n");
                 else {
                     pulse_period = new_pulse_period;
-                    sprintf(_packet_buffer, "New period : %u ms\n", pulse_period);
+                    sprintf(_buffer, "New period : %u ms\n", pulse_period);
                 }
 
                 break;
@@ -60,13 +60,13 @@ void Configuration::update()
                 // attempt to update the recipient IP ( andchecking if the
                 // IP is valid)
                 if (!recipient_ip.fromString(parameter)) {
-                    sprintf(_packet_buffer, "ERROR: Could not change the "
+                    sprintf(_buffer, "ERROR: Could not change the "
                                             "recipient IP from string %s\n"
                                             "Current address %s\n",
                         parameter.c_str(), recipient_ip.toString().c_str());
                 }
                 else {
-                    sprintf(_packet_buffer, "New recipient IP : %s\n",
+                    sprintf(_buffer, "New recipient IP : %s\n",
                         recipient_ip.toString().c_str());
                 }
 
@@ -80,13 +80,13 @@ void Configuration::update()
                 // check that the port is in the allowed range 0..65535
                 // and use it
                 if (new_port > 65535) {
-                    sprintf(_packet_buffer, "ERROR: Could not change the "
+                    sprintf(_buffer, "ERROR: Could not change the "
                                             "recipient port to%u\n",
                         new_port);
                 }
                 else {
                     recipient_port = new_port;
-                    sprintf(_packet_buffer, "New recipient port : %u\n",
+                    sprintf(_buffer, "New recipient port : %u\n",
                         recipient_port);
                 }
 
@@ -97,13 +97,13 @@ void Configuration::update()
                 uint8_t new_duty_cycle = labs(parameter.toInt());
 
                 if (new_duty_cycle > 99 || new_duty_cycle < 1) {
-                    sprintf(_packet_buffer, "ERROR: requested duty cycle %u% "
+                    sprintf(_buffer, "ERROR: requested duty cycle %u% "
                                             "is out of range of [1, 99].\n",
                         new_duty_cycle);
                 }
                 else {
                     blinkLed.set_duty_cycle(new_duty_cycle);
-                    sprintf(_packet_buffer, "Duty cycle changed to %u%\n",
+                    sprintf(_buffer, "Duty cycle changed to %u%\n",
                         new_duty_cycle);
                 }
                 break;
@@ -113,13 +113,13 @@ void Configuration::update()
                 uint16_t new_period = labs(parameter.toInt());
 
                 if (!blinkLed.set_period(new_period)) {
-                    sprintf(_packet_buffer, "ERROR: failed to set blinking "
+                    sprintf(_buffer, "ERROR: failed to set blinking "
                                             "period to %u (probably due to "
                                             "TickerScheduler)\n",
                         new_period);
                 }
                 else {
-                    sprintf(_packet_buffer, "Blink period changed to %u\n",
+                    sprintf(_buffer, "Blink period changed to %u\n",
                         new_period);
                 }
 
@@ -161,7 +161,7 @@ void Configuration::save()
 
 void Configuration::help_message(bool full_message)
 {
-    snprintf(_packet_buffer, _buffer_size,
+    snprintf(_buffer, _buffer_size,
         "Commands are single-character, optionally followed by one argument. Accepted commands are\n"
         "\tt change pulse period (time), in ms\n"
         "\ta change recipient ip [a]ddress\n"
@@ -180,13 +180,13 @@ void Configuration::help_message(bool full_message)
             "\nThe wifi SSID and password and network settings of the emergency stop"
             " are hard-coded in the firmware.\n";
         // only append the examples if the buffer is big enough
-        if (strlen(_packet_buffer) + strlen(examples) < _buffer_size)
-            strcat(_packet_buffer, examples);
+        if (strlen(_buffer) + strlen(examples) < _buffer_size)
+            strcat(_buffer, examples);
         else
         {
             // FIXME: this is a sort of hack to get the full help message to be sent.
             write();
-            snprintf(_packet_buffer, _buffer_size, examples);
+            snprintf(_buffer, _buffer_size, examples);
         }
     }
 }
@@ -199,20 +199,20 @@ size_t Configuration::read(void)
     {
         // This code was taken from
         // https://create.arduino.cc/projecthub/mikefarr/simple-command-line-interface-4f0a3f
-        size_t len = strlen(_packet_buffer);
+        size_t len = strlen(_buffer);
         while(Serial.available())
         {
             char c = Serial.read();
             switch (c) {
                 case '\r':
                 case '\n':
-                    _packet_buffer[len] = '\0'; // terminate the string
+                    _buffer[len] = '\0'; // terminate the string
                     bytes_count = len;
                     break;
                 case '\b': // backspace, remove one character from the buffer
                     if (len > 0)
                     {
-                        _packet_buffer[--len] = '\0';
+                        _buffer[--len] = '\0';
                         // This generates a warning that should be ignored
                         // (about shift biffer than width of type).
                         Serial << byte('\b') << byte(' ') << byte('\b');
@@ -220,8 +220,8 @@ size_t Configuration::read(void)
                     break;
                 default:
                     if (len < _buffer_size) 
-                        _packet_buffer[len++] = c;
-                    _packet_buffer[len] = '\0';
+                        _buffer[len++] = c;
+                    _buffer[len] = '\0';
                     break;
             }
         }
@@ -230,7 +230,7 @@ size_t Configuration::read(void)
     {
         if (_udp.parsePacket() > 0)
         {
-            bytes_count = _udp.read(_packet_buffer, _buffer_size);
+            bytes_count = _udp.read(_buffer, _buffer_size);
         }
     }
 
@@ -240,20 +240,20 @@ size_t Configuration::read(void)
 size_t Configuration::write(void)
 {
     size_t amount_written = 0;
-    if (strlen(_packet_buffer) > 0)
+    if (strlen(_buffer) > 0)
     {
         if (CommunicationMode::serial == _com_mode)
         {
             // Print the reply to the serial line
-            amount_written = Serial.print(_packet_buffer);
+            amount_written = Serial.print(_buffer);
             // Mark the buffer as empty, so that the read method can start anew.
-            _packet_buffer[0] = '\0';
+            _buffer[0] = '\0';
         }
         else if (CommunicationMode::udp == _com_mode)
         {
             // send a reply, to the IP address and port that sent us the packet we received
             _udp.beginPacket(_udp.remoteIP(), _udp.remotePort());
-            amount_written = _udp.write(_packet_buffer);
+            amount_written = _udp.write(_buffer);
             _udp.endPacket();
         }
     }

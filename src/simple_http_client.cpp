@@ -29,7 +29,8 @@ TickerScheduler scheduler(2 + 3 + 1);
 
 Configuration conf(Udp, scheduler, Configuration::CommunicationMode::serial);
 
-Pulse pulse(conf);
+// Object sending heartbeat pulses through the network
+Pulse pulse(conf, Udp, packet_buffer);
 
 // Function prototypes
 // void send_pulse();

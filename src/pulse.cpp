@@ -21,11 +21,9 @@ void Pulse::send_pulse()
     // add times to the times to hash
     memcpy(times, &time_s, sizeof(time_s));
     memcpy(times+sizeof(time_s), &time_ms, sizeof(time_ms));
-    // hash the times into packet_buffer
-    hmac(times, times_length, packet_buffer, 32);
+    // hash the times into _packet_buffer
+    hmac(times, times_length, _packet_buffer, 32);
 
-    // append the times to packet_buffer, for the recipient to check the pulse
-    memcpy(packet_buffer+32, &times, times_length);
 
     // Pretty-print the result of the message preparation
     // char read_hash[32];
@@ -49,17 +47,19 @@ void Pulse::send_pulse()
     // Serial.print(" (s)\t");
     // Serial.print(read_ms, DEC);
     // Serial.println(" (ms)");
+    // append the times to _packet_buffer, for the recipient to check the pulse
+    memcpy(_packet_buffer+32, &times, times_length);
     
     // Send a packet to the ROS emergency stop gateway
     int status = 0;
-    status = Udp.beginPacket(_conf.recipient_ip, _conf.recipient_port);
+    status = _udp.beginPacket(_conf.recipient_ip, _conf.recipient_port);
     if (status == 0)
         Serial.println("Problen in IP or port for packet preparation");
-    status = Udp.write(packet_buffer, message_length);
+    status = _udp.write(_packet_buffer, message_length);
     //  Serial.print("Amount of data sent: ");
     //  Serial.println(status);
 
-    status = Udp.endPacket();
+    status = _udp.endPacket();
     if (status == 0) {
         Serial.print("Could not send a UDP packet to IP ");
         Serial.print(_conf.recipient_ip);

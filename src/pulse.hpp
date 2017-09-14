@@ -6,8 +6,10 @@
 class Pulse
 {
 public:
-    Pulse(const Configuration& conf):
-        _conf(conf){}
+    Pulse(const Configuration& conf, WiFiUDP& Udp, char* packet_buffer):
+        _conf(conf),
+        _udp(Udp),
+        _packet_buffer(packet_buffer) {}
     
     /** Send a pulse, or heartbeat, to a given IP address.
         It is made of a message and the HMAC of this message, using a secret
@@ -31,6 +33,8 @@ protected:
         const size_t hmac_size);
 
     const Configuration& _conf;
+    WiFiUDP& _udp;
+    char* _packet_buffer;
 };
 
 #endif

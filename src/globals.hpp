@@ -2,8 +2,7 @@
 #define ESTOP_GLOBALS_HPP
 
 //  Object for UDP communication
+// used by ntp.cpp
 extern WiFiUDP Udp;
-
-extern char packet_buffer[512];
 
 #endif

@@ -13,7 +13,7 @@
 #include "ntp.hpp"
 
 // Pulse generator and sender for heartbeat
-// #include "pulse.hpp"
+#include "pulse.hpp"
 
 // Global variables and settings
 #include "globals.hpp"
@@ -27,15 +27,15 @@ char packet_buffer[512]; // buffer for incoming and outgoing data
 //  Instance of the task scheduler
 TickerScheduler scheduler(2 + 3 + 1);
 
-Configuration conf(Udp, packet_buffer, scheduler);
+Configuration conf(Udp, packet_buffer, 512, scheduler);
 
-// Pulse pulse(conf);
+Pulse pulse(conf);
 
 // Function prototypes
-void send_pulse();
+// void send_pulse();
 void read_battery_voltage();
 
-void hmac(const char* message, const size_t message_size, char* hmac, const size_t hmac_size){
+/*void hmac(const char* message, const size_t message_size, char* hmac, const size_t hmac_size){
     SHA256 hash;
     char key[] = "16:40:35";
     hash.resetHMAC(key, sizeof(key));
@@ -46,7 +46,7 @@ void hmac(const char* message, const size_t message_size, char* hmac, const size
     // {
     //     Serial.println((int)hmac[i], HEX);
     // }
-}
+}*/
 
 void setup(void)
 {
@@ -105,6 +105,8 @@ void setup(void)
     // Get the time from NTP server
     Serial.println("waiting for Network Time Protocol sync");
     setSyncProvider(getNtpTime);
+    // Tells how often the time is synchronised
+    setSyncInterval(3600); // in seconds
     Serial.print("Time status: ");
     switch(timeStatus()){
     case timeNotSet:
@@ -119,8 +121,10 @@ void setup(void)
 
     }
 
+    Serial.print("Listening on UDP port "); Serial.println(conf.config_port);
+
     // Setup the scheduler
-    // std::function<void(void)> send_pulse = std::bind(&Pulse::send_pulse, pulse);
+    std::function<void(void)> send_pulse = std::bind(&Pulse::send_pulse, pulse);
     if (!scheduler.add(0, conf.pulse_period, send_pulse, true))
         Serial.println("ERROR: Could not create the pulse task");
     std::function<void(void)> update_configuration = std::bind(&Configuration::update, conf);
@@ -149,6 +153,7 @@ void loop()
     delay(10);
 }
 
+/*
 void send_pulse()
 {
     // pulse_seed = (pulse_seed + 1) % 65536;
@@ -235,7 +240,7 @@ void send_pulse()
     // Serial.print(recipient_ip);
     // Serial.print(" and port ");
     // Serial.println(recipient_port);
-}
+}*/
 
 void read_battery_voltage()
 {

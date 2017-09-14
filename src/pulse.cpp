@@ -24,29 +24,6 @@ void Pulse::send_pulse()
     // hash the times into _packet_buffer
     hmac(times, times_length, _packet_buffer, 32);
 
-
-    // Pretty-print the result of the message preparation
-    // char read_hash[32];
-    // memcpy(read_hash, packet_buffer, 32);
-    // time_t read_s;
-    // memcpy(&read_s, packet_buffer+32, sizeof(time_t));
-    // unsigned long read_ms;
-    // memcpy(&read_ms, packet_buffer+32+sizeof(time_t), sizeof(unsigned long));
-    // // Print hash bytes
-    // for (uint8_t i=0; i<32; ++i)
-    // {
-    //     Serial.print((int)read_hash[i], HEX);
-    // }
-    // Serial.print("; ");
-    // for (uint8_t i=32; i<32+times_length; ++i)
-    // {
-    //     Serial.print((int)read_hash[i], HEX);
-    // }
-    // Serial.print("; ");
-    // Serial.print(read_s, DEC);
-    // Serial.print(" (s)\t");
-    // Serial.print(read_ms, DEC);
-    // Serial.println(" (ms)");
     // append the times to _packet_buffer, for the recipient to check the pulse
     memcpy(_packet_buffer+32, &times, times_length);
     
@@ -66,12 +43,6 @@ void Pulse::send_pulse()
         Serial.print(" and port ");
         Serial.println(_conf.recipient_port);
     }
-    // Serial.println("Sending the message");
-    // Serial.println(message);
-    // Serial.print("To IP ");
-    // Serial.print(recipient_ip);
-    // Serial.print(" and port ");
-    // Serial.println(recipient_port);
 }
 
 void Pulse::hmac(const char* message, const size_t message_size, char* hmac,
@@ -84,10 +55,4 @@ void Pulse::hmac(const char* message, const size_t message_size, char* hmac,
     hash.update(message, message_size);
     // copy the hash to the output
     hash.finalizeHMAC(_conf.key, _conf.key_size, hmac, hmac_size);
-
-    // Serial.print("Hmac output: ");
-    // for (uint8_t i=0; i<sizeof(hmac); ++i)
-    // {
-    //     Serial.println((int)hmac[i], HEX);
-    // }
 }

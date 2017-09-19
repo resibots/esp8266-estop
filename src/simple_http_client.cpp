@@ -26,7 +26,7 @@ WiFiUDP Udp;
 char packet_buffer[512]; // buffer for incoming and outgoing data
 
 //  Instance of the task scheduler
-TickerScheduler scheduler(2 + 3 + 1);
+TickerScheduler scheduler(2 + 3);
 
 // Manage and expose the configuration of the emergency stop
 // It also offers a configuration interface either through UDP or serial
@@ -35,9 +35,6 @@ Configuration conf(Udp, scheduler, Configuration::CommunicationMode::serial);
 
 // Object sending heartbeat pulses through the network
 Pulse pulse(conf, Udp, packet_buffer);
-
-// Function prototypes
-void read_battery_voltage();
 
 void setup(void)
 {
@@ -115,15 +112,12 @@ void setup(void)
     Serial.print("Listening on UDP port "); Serial.println(conf.config_port);
 
     // Setup the scheduler
-    std::function<void(void)> send_pulse = std::bind(&Pulse::send_pulse, pulse);
+    std::function<void(void)> send_pulse = std::bind(&Pulse::send_pulse, pulse, true);
     if (!scheduler.add(0, conf.pulse_period, send_pulse, true))
         Serial.println("ERROR: Could not create the pulse task");
     std::function<void(void)> update_configuration = std::bind(&Configuration::update, conf);
     if (!scheduler.add(1, 1000, update_configuration, true))
         Serial.println("ERROR: Could not create the configuration task");
-    // CAUTION : Tasks 2 to 4 are reserved for the led blinking class
-    if (!scheduler.add(5, 300, read_battery_voltage, true))
-        Serial.println("ERROR: Could not create the battery monitoring task");
 
     // initialisation of the led blinking class
     // pin for the led: 4
@@ -136,20 +130,4 @@ void loop()
     blinkLed.update();
 
     delay(10);
-}
-
-void read_battery_voltage()
-{
-    // The analog to digital converter has 10 bits, so ranges from 0 to 1023, for a
-    // voltage in the range 0V - 1V.
-    int level = analogRead(A0);
-
-    // We use a resistor-based voltage divider with R1 and R2 (R2 being the resistor
-    // closest to the ground). Values: R1 = 1000 kOhm; R2 = 220 kOhm
-    // Battery max voltage is 4.2V corresponding to 774 in digital
-    //         min            3.14V                 579
-    // Hence, we remap from digital values to percentage of charge
-    double percent_charge = (level - 579) * 100.0 / (774 - 579);
-    // Serial.print("Battery charge level is ");
-    // Serial.println(percent_charge);
 }

@@ -13,6 +13,7 @@ public:
     void update();
     bool set_duty_cycle(uint8_t new_duty_cycle);
     bool set_period(uint16_t new_period);
+    // Return true when the led is ON and false otherwise.
     bool led_status();
     void set_led_status(bool status);
 

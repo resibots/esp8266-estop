@@ -27,10 +27,15 @@ public:
         is the hash. Then come 4 bytes for the timestamp (unsigned long, in
         seconds) and 4 last bytes for the milliseconds (unsigned long).
     **/
-    void send_pulse(void);
+    void send_pulse(bool battery_level = false);
 protected:
+    size_t prepare_pulse();
     void hmac(const char* message, const size_t message_size, char* hmac,
         const size_t hmac_size);
+
+    size_t prepare_battery_voltage(size_t offset);
+    
+    void send_packet(size_t message_length);
 
     const Configuration& _conf;
     WiFiUDP& _udp;

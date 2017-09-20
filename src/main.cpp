@@ -1,25 +1,25 @@
-#include <functional>
+// Standard
+#include <functional> // for `bind`
 
+// Libraries
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <TimeLib.h>
 #include <TickerScheduler.h>
 #include <SHA256.h>
 
+// Project-specific classes, functions and variables
 // Class in charge of blinking a led
 #include "Led.hpp"
-
 // Functions getting current time from an NTP server
 #include "ntp.hpp"
-
 // Pulse generator and sender for heartbeat
 #include "pulse.hpp"
-
 // Global variables and settings
 #include "globals.hpp"
-
 // Configuration server
 #include "config.hpp"
+
 
 //  Object for UDP communication
 WiFiUDP Udp;
@@ -35,6 +35,7 @@ Configuration conf(Udp, scheduler, Configuration::CommunicationMode::serial);
 
 // Object sending heartbeat pulses through the network
 Pulse pulse(conf, Udp, packet_buffer);
+
 
 void setup(void)
 {
@@ -123,6 +124,7 @@ void setup(void)
     // pin for the led: 4
     blinkLed.init(4, &scheduler);
 }
+
 
 void loop()
 {

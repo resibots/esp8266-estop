@@ -19,28 +19,44 @@ void Pulse::send_pulse(bool battery_level)
 
 size_t Pulse::prepare_pulse()
 {
-    // Times
+    // Time and message counter
     time_t time_s = now();
-    unsigned long time_ms = millis();
+    uint16_t message_counter = inc_since_last_sec(time_s);
 
     // Array lengths
-    size_t times_length = sizeof(time_s) + sizeof(time_ms);
-    size_t message_length = times_length + 32;
+    size_t times_length = sizeof(time_s) + sizeof(message_counter);
+    size_t message_length = times_length + _hash_length;
     
     // array of bytes for the message
     char times[times_length];
     //memset(times, 0, times_length); TODO: do we need this ?
     // add times to the times to hash
     memcpy(times, &time_s, sizeof(time_s));
-    memcpy(times+sizeof(time_s), &time_ms, sizeof(time_ms));
+    memcpy(times+sizeof(time_s), &message_counter, sizeof(message_counter));
 
     // hash the times into _packet_buffer
-    hmac(times, times_length, _packet_buffer, 32);
+    hmac(times, times_length, _packet_buffer, _hash_length);
 
     // append the times to _packet_buffer, for the recipient to check the pulse
-    memcpy(_packet_buffer+32, &times, times_length);
+    memcpy(_packet_buffer+_hash_length, &times, times_length);
 
     return message_length;
+}
+
+uint16_t Pulse::inc_since_last_sec(time_t s)
+{
+    static time_t last_second = 0;
+    static uint16_t counter = 0;
+
+    if (s > last_second)
+    {
+        last_second = s;
+        counter = 0;
+    }
+    else
+        ++counter;
+
+    return counter;
 }
 
 void Pulse::hmac(const char* message, const size_t message_size, char* hmac,

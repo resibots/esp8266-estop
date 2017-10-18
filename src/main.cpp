@@ -13,8 +13,8 @@
 #include "Led.hpp"
 // Functions getting current time from an NTP server
 #include "ntp.hpp"
-// Pulse generator and sender for heartbeat
-#include "pulse.hpp"
+// Heartbeat generator and sender for heartbeat
+#include "heartbeat.hpp"
 // Global variables and settings
 #include "globals.hpp"
 // Configuration server
@@ -33,8 +33,8 @@ TickerScheduler scheduler(2 + 3);
 // communication.
 Configuration conf(Udp, scheduler, Configuration::CommunicationMode::serial);
 
-// Object sending heartbeat pulses through the network
-Pulse pulse(conf, Udp, packet_buffer);
+// Object sending heartbeat heartbeats through the network
+Heartbeat heartbeat(conf, Udp, packet_buffer);
 
 
 void setup(void)
@@ -45,7 +45,7 @@ void setup(void)
 
     // Initialize EEPROM
     static const uint32_t byte_space = 4 + 2 + 4; // memory space used by the
-    // settings: 4 for the IP, 2 for the port, 4 for the pulse period
+    // settings: 4 for the IP, 2 for the port, 4 for the heartbeat period
     EEPROM.begin(byte_space);
     conf.load();
 
@@ -114,9 +114,9 @@ void setup(void)
     Serial.print("Listening on UDP port "); Serial.println(conf.config_port);
 
     // Setup the scheduler
-    std::function<void(void)> send_pulse = std::bind(&Pulse::send_pulse, pulse, true);
-    if (!scheduler.add(0, conf.pulse_period, send_pulse, true))
-        Serial.println("ERROR: Could not create the pulse task");
+    std::function<void(void)> send_heartbeat = std::bind(&Heartbeat::send_heartbeat, heartbeat, true);
+    if (!scheduler.add(0, conf.heartbeat_period, send_heartbeat, true))
+        Serial.println("ERROR: Could not create the heartbeat task");
     std::function<void(void)> update_configuration = std::bind(&Configuration::update, conf);
     if (!scheduler.add(1, 1000, update_configuration, true))
         Serial.println("ERROR: Could not create the configuration task");

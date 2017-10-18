@@ -13,10 +13,10 @@ void Configuration::update()
             sprintf(_buffer,
                 "Recipient IP   %s\n"
                 "Recipient port %u\n"
-                "Pulse period   %u\n",
+                "HEartbeat period   %u\n",
                 recipient_ip.toString().c_str(),
                 recipient_port,
-                pulse_period);
+                heartbeat_period);
         }
         else if (_buffer[0] == 's') {
             // save the settings in EEPRO if the change was successful
@@ -34,23 +34,23 @@ void Configuration::update()
             // Select the command to execute based on first received
             // character
             switch (_buffer[0]) {
-            case 't': // update pulse period
+            case 't': // update heartbeat period
             {
                 // retrieve the desired period
-                uint32_t new_pulse_period = labs(parameter.toInt());
+                uint32_t new_heartbeat_period = labs(parameter.toInt());
 
                 // tell whether the setting change was successful
                 bool success = false;
-                // Change the period of the pulse task (change value and
+                // Change the period of the heartbeat task (change value and
                 // update task)
-                success = _scheduler.changePeriod(0, new_pulse_period)
+                success = _scheduler.changePeriod(0, new_heartbeat_period)
                     & _scheduler.disable(0) // required for the change to be
                     & _scheduler.enable(0); // effective
                 if (!success)
-                    sprintf(_buffer, "ERROR: Could not change the pulse period\n");
+                    sprintf(_buffer, "ERROR: Could not change the heartbeat period\n");
                 else {
-                    pulse_period = new_pulse_period;
-                    sprintf(_buffer, "New period : %u ms\n", pulse_period);
+                    heartbeat_period = new_heartbeat_period;
+                    sprintf(_buffer, "New period : %u ms\n", heartbeat_period);
                 }
 
                 break;
@@ -141,21 +141,21 @@ void Configuration::load()
     EEPROM.get(0, temp_ip);
     recipient_ip = temp_ip;
     EEPROM.get(4, recipient_port);
-    EEPROM.get(6, pulse_period);
+    EEPROM.get(6, heartbeat_period);
     Serial.printf(
         "Recipient IP   %s\n"
         "Recipient port %u\n"
-        "Pulse period   %u\n",
+        "Heartbeat period   %u\n",
         recipient_ip.toString().c_str(),
         recipient_port,
-        pulse_period);
+        heartbeat_period);
 }
 
 void Configuration::save()
 {
     EEPROM.put(0, (uint32_t)recipient_ip);
     EEPROM.put(4, recipient_port);
-    EEPROM.put(6, pulse_period);
+    EEPROM.put(6, heartbeat_period);
     EEPROM.commit();
 }
 
@@ -163,7 +163,7 @@ void Configuration::help_message(bool full_message)
 {
     snprintf(_buffer, _buffer_size,
         "Commands are single-character, optionally followed by one argument. Accepted commands are\n"
-        "\tt change pulse period (time), in ms\n"
+        "\tt change heartbeat period (time), in ms\n"
         "\ta change recipient ip [a]ddress\n"
         "\tp change recipient [p]ort\n"
         "\td change led blinking [d]uty cycle\n"
@@ -172,7 +172,7 @@ void Configuration::help_message(bool full_message)
         "\ts [s]ave current settings.\n");
     if (full_message) {
         char examples[] = "Examples:\n"
-            "\tt 500           set pulse period to 500 ms\n"
+            "\tt 500           set heartbeat period to 500 ms\n"
             "\ta 152.81.70.3   set recipient IP\n"
             "\tp 1042          set recipient port to 1042\n"
             "\td 61            set duty cycle to 61%\n"

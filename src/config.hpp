@@ -30,14 +30,14 @@ public:
     const IPAddress dns_server_primary;
     const IPAddress dns_server_secondary;
     const uint16_t config_port; // local port on which we listen for configuration
-    //  key for the pulses sent to the ROS node
+    //  key for the heartbeats sent to the ROS node
     static constexpr char const *key = "16:40:35";
     static constexpr size_t key_size = 8;
 
-    IPAddress recipient_ip; // IP address of the computer to which we send the pulses
-    uint16_t recipient_port; // port to which the pulses are sent
+    IPAddress recipient_ip; // IP address of the computer to which we send the heartbeats
+    uint16_t recipient_port; // port to which the heartbeats are sent
     
-    uint32_t pulse_period; // period of the pulse (ms)
+    uint32_t heartbeat_period; // period of the heartbeat (ms)
 
     enum class CommunicationMode : uint8_t
     {
@@ -57,7 +57,7 @@ public:
         config_port(1043),
         recipient_ip(152, 81, 10, 184),
         recipient_port(1042),
-        pulse_period(500) {
+        heartbeat_period(500) {
             _buffer_size = 512;
             _buffer = new char[_buffer_size];
         }

@@ -1,13 +1,13 @@
 #include <TimeLib.h>
 #include <SHA256.h>
 
-#include "pulse.hpp"
+#include "heartbeat.hpp"
 #include "globals.hpp"
 
 
-void Pulse::send_pulse(bool battery_level)
+void Heartbeat::send_heartbeat(bool battery_level)
 {
-    size_t message_length = prepare_pulse();
+    size_t message_length = prepare_heartbeat();
 
     if (battery_level)
     {
@@ -17,7 +17,7 @@ void Pulse::send_pulse(bool battery_level)
     send_packet(message_length);
 }
 
-size_t Pulse::prepare_pulse()
+size_t Heartbeat::prepare_heartbeat()
 {
     // Time and message counter
     time_t time_s = now();
@@ -37,13 +37,13 @@ size_t Pulse::prepare_pulse()
     // hash the times into _packet_buffer
     hmac(times, times_length, _packet_buffer, _hash_length);
 
-    // append the times to _packet_buffer, for the recipient to check the pulse
+    // append the times to _packet_buffer, for the recipient to check the heartbeat
     memcpy(_packet_buffer+_hash_length, &times, times_length);
 
     return message_length;
 }
 
-uint16_t Pulse::inc_since_last_sec(time_t s)
+uint16_t Heartbeat::inc_since_last_sec(time_t s)
 {
     static time_t last_second = 0;
     static uint16_t counter = 0;
@@ -59,7 +59,7 @@ uint16_t Pulse::inc_since_last_sec(time_t s)
     return counter;
 }
 
-void Pulse::hmac(const char* message, const size_t message_size, char* hmac,
+void Heartbeat::hmac(const char* message, const size_t message_size, char* hmac,
     const size_t hmac_size)
 {
     SHA256 hash;
@@ -71,7 +71,7 @@ void Pulse::hmac(const char* message, const size_t message_size, char* hmac,
     hash.finalizeHMAC(_conf.key, _conf.key_size, hmac, hmac_size);
 }
 
-size_t Pulse::prepare_battery_voltage(size_t offset)
+size_t Heartbeat::prepare_battery_voltage(size_t offset)
 {
     // The analog to digital converter has 10 bits, so ranges from 0 to 1023, for a
     // voltage in the range 0V - 1V.
@@ -88,7 +88,7 @@ size_t Pulse::prepare_battery_voltage(size_t offset)
     return sizeof(percent_charge);
 }
 
-void Pulse::send_packet(size_t message_length)
+void Heartbeat::send_packet(size_t message_length)
 {
     // Send a packet to the ROS emergency stop gateway
     int status = 0;

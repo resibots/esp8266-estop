@@ -56,8 +56,9 @@ void sendNTPpacket()
   // all NTP fields have been given values, now
   // you can send a packet requesting a timestamp:         
   
-  // Using http://www.pool.ntp.org/zone/fr
-  Udp.beginPacket("pool.ntp.org", 123); //NTP requests are to port 123
+  // If possible, you can use http://www.pool.ntp.org/zone/fr : pool.ntp.org
+  // Using Local NTP server.
+  Udp.beginPacket("ntp.loria.fr", 123); //NTP requests are to port 123
   Udp.write(packetBuffer, NTP_PACKET_SIZE);
   Udp.endPacket();
 }

@@ -95,7 +95,8 @@ void setup(void)
     Serial.println("waiting for Network Time Protocol sync");
     setSyncProvider(getNtpTime);
     // Tells how often the time is synchronised
-    setSyncInterval(3600); // in seconds
+    // By default, synchronisation is done every five minutes
+    // setSyncInterval(3600); // in seconds
     Serial.print("Time status: ");
     switch(timeStatus()){
     case timeNotSet:

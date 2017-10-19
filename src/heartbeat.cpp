@@ -20,12 +20,12 @@ void Heartbeat::send_heartbeat(bool battery_level)
 size_t Heartbeat::prepare_heartbeat()
 {
     // Time and message counter
-    time_t time_s = now();
-    uint16_t message_counter = inc_since_last_sec(time_s);
+    const time_t time_s = now();
+    const uint16_t message_counter = inc_since_last_sec(time_s);
 
     // Array lengths
-    size_t times_length = sizeof(time_s) + sizeof(message_counter);
-    size_t message_length = times_length + _hash_length;
+    const size_t times_length = sizeof(time_s) + sizeof(message_counter);
+    const size_t message_length = times_length + _hash_length;
     
     // array of bytes for the message
     char times[times_length];

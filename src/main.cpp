@@ -3,10 +3,10 @@
 
 // Libraries
 #include <ESP8266WiFi.h>
-#include <WiFiUdp.h>
-#include <TimeLib.h>
-#include <TickerScheduler.h>
 #include <SHA256.h>
+#include <TickerScheduler.h>
+#include <TimeLib.h>
+#include <WiFiUdp.h>
 
 // Project-specific classes, functions and variables
 // Class in charge of blinking a led
@@ -20,6 +20,7 @@
 // Configuration server
 #include "config.hpp"
 
+#include "Arduino.h"
 
 //  Object for UDP communication
 WiFiUDP Udp;
@@ -36,12 +37,17 @@ Configuration conf(Udp, scheduler, Configuration::CommunicationMode::serial);
 // Object sending heartbeat heartbeats through the network
 Heartbeat heartbeat(conf, Udp, packet_buffer);
 
-
 void setup(void)
 {
     // Initialize the serial port
     Serial.begin(115200);
     Serial.println('\n');
+
+    // Print MAC address, in case we need it for wifi setup
+    uint8_t macAddr[6];
+    WiFi.macAddress(macAddr);
+    Serial.printf("Mac address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+        macAddr[0], macAddr[1], macAddr[2], macAddr[3], macAddr[4], macAddr[5]);
 
     // Initialize EEPROM
     static const uint32_t byte_space = 4 + 2 + 4; // memory space used by the
@@ -83,14 +89,10 @@ void setup(void)
     Serial.println();
     Serial.print("Connected, IP address: ");
     Serial.println(WiFi.localIP());
-    uint8_t macAddr[6];
-    WiFi.macAddress(macAddr);
-    Serial.printf("Mac address: %02x:%02x:%02x:%02x:%02x:%02x\n",
-        macAddr[0], macAddr[1], macAddr[2], macAddr[3], macAddr[4], macAddr[5]);
 
     // Setup of UDP communication with the port on which to listen
-    Udp.begin(conf.config_port);
-    
+    Udp.begin(conf.config_port); // used for NTP and configuration (if enabled)
+
     // Get the time from NTP server
     Serial.println("waiting for Network Time Protocol sync");
     setSyncProvider(getNtpTime);
@@ -98,7 +100,7 @@ void setup(void)
     // By default, synchronisation is done every five minutes
     // setSyncInterval(3600); // in seconds
     Serial.print("Time status: ");
-    switch(timeStatus()){
+    switch (timeStatus()) {
     case timeNotSet:
         Serial.println("not set");
         break;
@@ -108,16 +110,16 @@ void setup(void)
     case timeNeedsSync:
         Serial.println("needs sync");
         break;
-
     }
 
-    Serial.print("Listening on UDP port "); Serial.println(conf.config_port);
+    Serial.print("Listening on UDP port ");
+    Serial.println(conf.config_port);
 
     // Setup the scheduler
-    std::function<void(void)> send_heartbeat = std::bind(&Heartbeat::send_heartbeat, heartbeat, true);
+    std::function<void(void)> send_heartbeat = std::bind(&Heartbeat::send_heartbeat, &heartbeat, true);
     if (!scheduler.add(0, conf.heartbeat_period, send_heartbeat, true))
         Serial.println("ERROR: Could not create the heartbeat task");
-    std::function<void(void)> update_configuration = std::bind(&Configuration::update, conf);
+    std::function<void(void)> update_configuration = std::bind(&Configuration::update, &conf);
     if (!scheduler.add(1, 1000, update_configuration, true))
         Serial.println("ERROR: Could not create the configuration task");
 
@@ -125,7 +127,6 @@ void setup(void)
     // pin for the led: 4
     blinkLed.init(4, &scheduler);
 }
-
 
 void loop()
 {

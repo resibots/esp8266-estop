@@ -23,9 +23,12 @@ public:
         We use time as the message, so that heartbeats that are too old are
         discarded (to limit the risk of relay attack).
 
-        The data is sent as a bynary stream of 32+4+2 bytes. The 32 first bytes
+        The data is sent as a binary stream of 32+4+2 bytes. The 32 first bytes
         is the hash. Then come 4 bytes for the timestamp (unsigned long, in
         seconds) and 2 last bytes for the counter (uint16).
+
+        @param dummy unused variable, required by TickerScheduler
+        @param battery_level include the battery level in the message
     **/
     void send_heartbeat(bool battery_level = false);
 protected:

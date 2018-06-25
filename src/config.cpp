@@ -13,16 +13,19 @@ void Configuration::update()
             sprintf(_buffer,
                 "Recipient IP   %s\n"
                 "Recipient port %u\n"
-                "HEartbeat period   %u\n",
+                "Heartbeat period   %u\n",
                 recipient_ip.toString().c_str(),
                 recipient_port,
                 heartbeat_period);
         }
         else if (_buffer[0] == 's') {
-            // save the settings in EEPRO if the change was successful
-            save();
+            // save the settings in EEPROM if the change was successful
+            if (save())
+                sprintf(_buffer, "Settings saved\n");
+            else
+                sprintf(_buffer, "Settings failed to be saved\n");
         }
-        else if (_buffer[0] ==  'h') {
+        else if (_buffer[0] == 'h') {
             help_message(true);
         }
         else if (packet_size > 2 && _buffer[1] == ' ') {
@@ -61,8 +64,8 @@ void Configuration::update()
                 // IP is valid)
                 if (!recipient_ip.fromString(parameter)) {
                     sprintf(_buffer, "ERROR: Could not change the "
-                                            "recipient IP from string %s\n"
-                                            "Current address %s\n",
+                                     "recipient IP from string %s\n"
+                                     "Current address %s\n",
                         parameter.c_str(), recipient_ip.toString().c_str());
                 }
                 else {
@@ -81,7 +84,7 @@ void Configuration::update()
                 // and use it
                 if (new_port > 65535) {
                     sprintf(_buffer, "ERROR: Could not change the "
-                                            "recipient port to%u\n",
+                                     "recipient port to%u\n",
                         new_port);
                 }
                 else {
@@ -98,13 +101,13 @@ void Configuration::update()
 
                 if (new_duty_cycle > 99 || new_duty_cycle < 1) {
                     sprintf(_buffer, "ERROR: requested duty cycle %u% "
-                                            "is out of range of [1, 99].\n",
-                        new_duty_cycle);
+                                     "is out of range of [1, 99].\n",
+                        (int)new_duty_cycle);
                 }
                 else {
                     blinkLed.set_duty_cycle(new_duty_cycle);
                     sprintf(_buffer, "Duty cycle changed to %u%\n",
-                        new_duty_cycle);
+                        (int)new_duty_cycle);
                 }
                 break;
             }
@@ -114,8 +117,8 @@ void Configuration::update()
 
                 if (!blinkLed.set_period(new_period)) {
                     sprintf(_buffer, "ERROR: failed to set blinking "
-                                            "period to %u (probably due to "
-                                            "TickerScheduler)\n",
+                                     "period to %u (probably due to "
+                                     "TickerScheduler)\n",
                         new_period);
                 }
                 else {
@@ -130,7 +133,7 @@ void Configuration::update()
         else {
             help_message(false);
         }
-        
+
         write();
     }
 }
@@ -151,12 +154,12 @@ void Configuration::load()
         heartbeat_period);
 }
 
-void Configuration::save()
+bool Configuration::save()
 {
     EEPROM.put(0, (uint32_t)recipient_ip);
     EEPROM.put(4, recipient_port);
     EEPROM.put(6, heartbeat_period);
-    EEPROM.commit();
+    return EEPROM.commit();
 }
 
 void Configuration::help_message(bool full_message)
@@ -172,18 +175,17 @@ void Configuration::help_message(bool full_message)
         "\ts [s]ave current settings.\n");
     if (full_message) {
         char examples[] = "Examples:\n"
-            "\tt 500           set heartbeat period to 500 ms\n"
-            "\ta 152.81.70.3   set recipient IP\n"
-            "\tp 1042          set recipient port to 1042\n"
-            "\td 61            set duty cycle to 61%\n"
-            "\te 1000          set led blink period to 1000 ms\n"
-            "\nThe wifi SSID and password and network settings of the emergency stop"
-            " are hard-coded in the firmware.\n";
+                          "\tt 500           set heartbeat period to 500 ms\n"
+                          "\ta 152.81.70.3   set recipient IP\n"
+                          "\tp 1042          set recipient port to 1042\n"
+                          "\td 61            set duty cycle to 61%\n"
+                          "\te 1000          set led blink period to 1000 ms\n"
+                          "\nThe wifi SSID and password and network settings of the emergency stop"
+                          " are hard-coded in the firmware.\n";
         // only append the examples if the buffer is big enough
         if (strlen(_buffer) + strlen(examples) < _buffer_size)
             strcat(_buffer, examples);
-        else
-        {
+        else {
             // FIXME: this is a sort of hack to get the full help message to be sent.
             write();
             snprintf(_buffer, _buffer_size, examples);
@@ -195,41 +197,36 @@ size_t Configuration::read(void)
 {
     size_t bytes_count = 0;
 
-    if (CommunicationMode::serial == _com_mode)
-    {
+    if (CommunicationMode::serial == _com_mode) {
         // This code was taken from
         // https://create.arduino.cc/projecthub/mikefarr/simple-command-line-interface-4f0a3f
         size_t len = strlen(_buffer);
-        while(Serial.available())
-        {
+        while (Serial.available()) {
             char c = Serial.read();
             switch (c) {
-                case '\r':
-                case '\n':
-                    _buffer[len] = '\0'; // terminate the string
-                    bytes_count = len;
-                    break;
-                case '\b': // backspace, remove one character from the buffer
-                    if (len > 0)
-                    {
-                        _buffer[--len] = '\0';
-                        // This generates a warning that should be ignored
-                        // (about shift biffer than width of type).
-                        Serial << byte('\b') << byte(' ') << byte('\b');
-                    }
-                    break;
-                default:
-                    if (len < _buffer_size) 
-                        _buffer[len++] = c;
-                    _buffer[len] = '\0';
-                    break;
+            case '\r':
+            case '\n':
+                _buffer[len] = '\0'; // terminate the string
+                bytes_count = len;
+                break;
+            case '\b': // backspace, remove one character from the buffer
+                if (len > 0) {
+                    _buffer[--len] = '\0';
+                    // This generates a warning that should be ignored
+                    // (about shift biffer than width of type).
+                    Serial << byte('\b') << byte(' ') << byte('\b');
+                }
+                break;
+            default:
+                if (len < _buffer_size)
+                    _buffer[len++] = c;
+                _buffer[len] = '\0';
+                break;
             }
         }
     }
-    else if (CommunicationMode::udp == _com_mode)
-    {
-        if (_udp.parsePacket() > 0)
-        {
+    else if (CommunicationMode::udp == _com_mode) {
+        if (_udp.parsePacket() > 0) {
             bytes_count = _udp.read(_buffer, _buffer_size);
         }
     }
@@ -240,17 +237,14 @@ size_t Configuration::read(void)
 size_t Configuration::write(void)
 {
     size_t amount_written = 0;
-    if (strlen(_buffer) > 0)
-    {
-        if (CommunicationMode::serial == _com_mode)
-        {
+    if (strlen(_buffer) > 0) {
+        if (CommunicationMode::serial == _com_mode) {
             // Print the reply to the serial line
             amount_written = Serial.print(_buffer);
             // Mark the buffer as empty, so that the read method can start anew.
             _buffer[0] = '\0';
         }
-        else if (CommunicationMode::udp == _com_mode)
-        {
+        else if (CommunicationMode::udp == _com_mode) {
             // send a reply, to the IP address and port that sent us the packet we received
             _udp.beginPacket(_udp.remoteIP(), _udp.remotePort());
             amount_written = _udp.write(_buffer);

@@ -75,14 +75,17 @@ size_t Heartbeat::prepare_battery_voltage(size_t offset)
 {
     // The analog to digital converter has 10 bits, so ranges from 0 to 1023, for a
     // voltage in the range 0V - 1V.
-    int level = analogRead(A0);
+    uint16_t level = analogRead(A0);
     
     // We use a resistor-based voltage divider with R1 and R2 (R2 being the resistor
     // closest to the ground). Values: R1 = 1000 kOhm; R2 = 220 kOhm
     // Battery max voltage is 4.2V corresponding to 774 in digital
     //         min            3.14V                 579
     // Hence, we remap from digital values to percentage of charge
-    float percent_charge = (level - 579) * 100.0 / (774 - 579);
+    // Actually, I observed charge percentages of more than 107%. I thereforce
+    // change the parameters such that we do not go above 100% (max value from
+    // 774 to 787).
+    float percent_charge = (level - 579) * 100.0 / (787 - 579);
 
     memcpy(_packet_buffer+offset, &percent_charge, sizeof(percent_charge));
     return sizeof(percent_charge);

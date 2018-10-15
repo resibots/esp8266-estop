@@ -21,3 +21,7 @@ We rely on [TickerScheduler] for a basic time-based scheduling of the different 
 ## Remarks
 
 One of the fields of the heartbeat messages is the battery charge level. This information is based on the voltage on the battery and is very noisy. It is apparently mainly due to the ESP8266 Wifi module that disrupts analogue readings.
+
+## Future improvements
+
+I think that it would be nice to have the blinking pattern of the leds change based on the status of the e-stop. Alternatively, there could be a second pair of LEDs (of a different color) for the status, that would blink only when the battery is low or when the connexion is lost.

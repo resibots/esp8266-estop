@@ -124,8 +124,8 @@ void setup(void)
         Serial.println("ERROR: Could not create the configuration task");
 
     // initialisation of the led blinking class
-    // pin for the led: 4
-    blinkLed.init(4, &scheduler);
+    // pin for the led: 5
+    blinkLed.init(5, &scheduler);
 }
 
 void loop()

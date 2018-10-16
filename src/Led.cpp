@@ -43,7 +43,7 @@ void Led::update()
 {
     if (_led_status_changed) {
         // digitalWrite(4, led_status ? HIGH : LOW);
-        analogWrite(4, _led_status ? 700 : 0);
+        analogWrite(_led_pin, _led_status ? 500 : 0);
         _led_status_changed = false;
     }
 }

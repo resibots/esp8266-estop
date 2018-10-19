@@ -52,3 +52,43 @@ For now the electronics boards are just left floating in the button. We would de
 This might be done as a daughter board or as a simpler board with wire connecting it to the Huzzah.
 
 It would also be nice to put a connector for each led, so that the button can be more easily opened.
+
+## Hardware design
+
+A little picture of our button, so that you understand what we mean:
+
+![picture of the emergency button we made](hardware/picture.png)
+
+### Electronics
+
+The electronics here are extremely simple :
+
+1. a voltage divider and low-pass filter for the measure of the battery's charge level
+2. resistors for current-limitation on the two LEDs
+
+For those who want more details, here is a schematic of the electronics:
+
+![see the electronics folder for the schematic](electronics/schematic.svg)
+
+Bill of materials for the board
+
+component reference | value
+---------|----------
+ R1 & R3 | 1 Mohm
+ R2 | 220 Kohm
+ R4 | 22 ohm
+ C1 | 1 uF
+ LED1 & LED2 | blue led (Radio Spares 815-4366)
+
+We also bought
+
+### Mechanical
+
+Bill of materials:
+
+Designation | Radio Spares product number
+----------|---------
+ Emergency stop button | 330-8587
+ Normally open contactor (for the button) | 331-0574
+
+We also made a 3D printed part that would bit below the button, in order to host the too large battery. The design is available as STL in the hardware folder. It was designed with Onshape ([link to the original design](https://cad.onshape.com/documents/043af48d8279ec13bb06e1de/w/d73f08f1384db1234596df65/e/912adaf6e6cce1dc58b794c6)).
